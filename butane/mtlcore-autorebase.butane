@@ -1,0 +1,69 @@
+variant: fcos
+version: 1.6.0
+passwd:
+  users:
+    - name: core
+      password_hash: $y$j9T$G.oy43S/u6YnxXoqi3/mT0$Rm0dlsJst4iNqNvGV2fRGisTXLCgobolxb/wQvOVTD/
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOX9R5AbtN3pSyCukTGk4Si1j6c/mdB2y/lpdy1XNf3T mainsail@fedora41.mainsail.lab
+storage:
+  files:
+    - path: /etc/issue.d/50_metalvisor.issue
+      mode: 0644
+      contents:
+        inline: |
+          Metalvisor: mtlcore
+  directories:
+    - path: /etc/mtlcore-autorebase
+      mode: 0754
+systemd:
+  units:
+    - name: mtlcore-unsigned-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=mtlcore autorebase to unsigned OCI and reboot
+        ConditionPathExists=!/etc/mtlcore-autorebase/unverified
+        ConditionPathExists=!/etc/mtlcore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/mainsail44/mtlcore:latest
+        ExecStart=/usr/bin/touch /etc/mtlcore-autorebase/unverified
+        ExecStart=/usr/bin/systemctl disable mtlcore-unsigned-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: mtlcore-signed-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=mtlcore autorebase to signed OCI and reboot
+        ConditionPathExists=/etc/mtlcore-autorebase/unverified
+        ConditionPathExists=!/etc/mtlcore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/mainsail44/mtlcore:latest
+        ExecStart=/usr/bin/touch /etc/mtlcore-autorebase/signed
+        ExecStart=/usr/bin/systemctl disable mtlcore-signed-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: set-hostname.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Set hostname
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/hostnamectl set-hostname mtlcore
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
