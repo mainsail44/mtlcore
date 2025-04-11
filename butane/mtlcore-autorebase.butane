@@ -27,13 +27,16 @@ systemd:
         ConditionPathExists=!/etc/mtlcore-autorebase/signed
         After=network-online.target
         Wants=network-online.target
+
         [Service]
         Type=oneshot
         StandardOutput=journal+console
+        ExecStartPre=/usr/bin/test -d /boot/loader || /usr/bin/mkdir -p /boot/loader/entries
         ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/mainsail44/mtlcore:latest
         ExecStart=/usr/bin/touch /etc/mtlcore-autorebase/unverified
         ExecStart=/usr/bin/systemctl disable mtlcore-unsigned-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
+
         [Install]
         WantedBy=multi-user.target
     - name: mtlcore-signed-autorebase.service
@@ -45,13 +48,16 @@ systemd:
         ConditionPathExists=!/etc/mtlcore-autorebase/signed
         After=network-online.target
         Wants=network-online.target
+
         [Service]
         Type=oneshot
         StandardOutput=journal+console
+        ExecStartPre=/usr/bin/test -d /boot/loader || /usr/bin/mkdir -p /boot/loader/entries
         ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/mainsail44/mtlcore:latest
         ExecStart=/usr/bin/touch /etc/mtlcore-autorebase/signed
         ExecStart=/usr/bin/systemctl disable mtlcore-signed-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
+
         [Install]
         WantedBy=multi-user.target
     - name: set-hostname.service
