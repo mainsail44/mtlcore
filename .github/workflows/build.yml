@@ -1,4 +1,4 @@
-name: bluebuild
+name: mtlcore
 on:
   schedule:
     - cron:
